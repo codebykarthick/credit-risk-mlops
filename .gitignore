@@ -205,3 +205,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# My project specific items that are not needed on the actual repo
+data/
+logs/
