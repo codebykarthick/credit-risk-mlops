@@ -22,6 +22,9 @@ install: venv
 preprocess:
 	$(PYTHON) src/data_preprocessing.py all
 
+engineer:
+	$(PYTHON) src/features.py
+
 train:
 	$(PYTHON) src/train.py
 
@@ -36,5 +39,5 @@ clean:
 	rm -rf $(VENV_NAME)
 	@echo "🧹 Project cleaned"
 
-all: install preprocess train
+all: install preprocess engineer train
 	@echo "🚀 All steps complete!"
