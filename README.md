@@ -35,9 +35,12 @@ pip install -r requirements.txt
 3. **Prepare the data**:
 * Download the csv training file from kaggle and place them in `data/raw` folder in the project root.
 
+4. **Run commands**:
+Check `scripts/run.sh` for sample commands or use the makefile (all runs everything from first to last).
+
 ## Structure
 * `notebooks/`: Contains the Jupyter notebooks used for the simple exploration of the data.
-* `src/`: All the code used for training, evaluation and serving the trained model.
+* `src/`: All the code used for preprocessing, feature engineering, training, evaluation and serving the trained model.
 
 ## 📈 Goals
 * Build an explainable credit default classifier
