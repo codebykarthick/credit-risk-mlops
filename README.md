@@ -16,6 +16,7 @@ To use this project, download the following training data file from the [competi
 ---
 
 ## 🛠️ Setup
+A `Makefile` is included for running the critical flows, please check it for usage. It supports a variety of reproducible commands.
 
 1. **Clone the repository**:
 
@@ -36,6 +37,7 @@ pip install -r requirements.txt
 
 ## Structure
 * `notebooks/`: Contains the Jupyter notebooks used for the simple exploration of the data.
+* `src/`: All the code used for training, evaluation and serving the trained model.
 
 ## 📈 Goals
 * Build an explainable credit default classifier

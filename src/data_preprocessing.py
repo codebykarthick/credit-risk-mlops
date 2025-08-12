@@ -1,5 +1,6 @@
 import os
 from typing import Tuple
+import sys
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -65,7 +66,84 @@ def save_splits(train: pd.DataFrame, val: pd.DataFrame,
     test.to_csv(f"{out_dir}/test.csv", index=False)
     log.info("All files processed sucessfully!")
 
+def impute_missing_values() -> None:
+    """Impute missing values using training set statistics only, updating it in place.
+    """
+    base_path = os.path.join(os.getcwd(), "..", "data", "processed")
+    train_path = os.path.join(base_path, "train.csv")
+    val_path = os.path.join(base_path, "val.csv")
+    test_path = os.path.join(base_path, "test.csv")
+    
+    log.info("Loading datasets")
+    train_df = pd.read_csv(train_path)
+    val_df = pd.read_csv(val_path)
+    test_df = pd.read_csv(test_path)
+
+    log.info("Removing age outliers")
+    # Remove the age == 0 records from all data
+    train_df = train_df[train_df["age"] > 0]
+    val_df = val_df[val_df["age"] > 0]
+    test_df = test_df[test_df["age"] > 0]
+
+    log.info("Imputing MonthlyIncome with median")
+    # Impute MonthlyIncome with median (check eda notebook for reason)
+    income_median = train_df["MonthlyIncome"].median()
+    log.info(f"Imputing MonthlyIncome with train median: {income_median:.2f}")
+    for df in [train_df, val_df, test_df]:
+        df["MonthlyIncome"].fillna(income_median, inplace=True)
+    
+    log.info("Imputing NumberOfDependents with mode")
+    # Impute NumberOfDependents with mode (again eda notebook)
+    dependents_mode = train_df["NumberOfDependents"].mode()[0]
+    log.info(f"Imputing NumberOfDependents with train mode: {dependents_mode}")
+    for df in [train_df, val_df, test_df]:
+        df["NumberOfDependents"].fillna(dependents_mode, inplace=True)
+    
+    log.info("Clipping the outliers of other columns with hard values or upper percentile")
+    # Cap the values to prevent throwing off my model
+    for col in ["NumberOfTimes90DaysLate", "NumberOfTime60-89DaysPastDueNotWorse", "NumberOfTime30-59DaysPastDueNotWorse"]:
+        for df in [train_df, val_df, test_df]:
+            # Handle those weird 98 values
+            df[f"{col}_extreme"] = (df[col] >= 90).astype(int)
+            df[col] = df[col].clip(upper=10)
+    
+    for df in [train_df, val_df, test_df]:
+        # Its a percent so anything above 1 itself is weird.
+        df["overutilized"] = (df["RevolvingUtilizationOfUnsecuredLines"] > 1).astype(int)
+        df["RevolvingUtilizationOfUnsecuredLines"] = df["RevolvingUtilizationOfUnsecuredLines"].clip(upper=1.0)
+
+    clip_threshold = train_df["DebtRatio"].quantile(0.99)
+    log.info(f"Clipping DebtRatio at 99th percentile: {clip_threshold:.2f}")
+    for df in [train_df, val_df, test_df]:
+        # The max value is 326442.0, assuming the person has less debt than a country
+        df["DebtRatio"] = df["DebtRatio"].clip(upper=clip_threshold)
+    
+    save_splits(train=train_df, val=val_df, test=test_df)
+
+
+    
+
+
 
 if __name__ == "__main__":
-    train, val, test = load_and_split()
-    save_splits(train=train, val=val, test=test)
+    allowed_methods = ["split", "impute", "all"]
+
+    if len(sys.argv) < 2:
+        log.error("Requires an argument to select the type of preprocessing.")
+        sys.exit()
+
+    method = sys.argv[1]
+
+    if method not in allowed_methods:
+        log.error(f"Specified method is wrong, allowed methods are: {allowed_methods}")
+        sys.exit()
+
+    if method != "impute" or not os.path.exists(os.path.join(os.getcwd(), "..", "data", "processed")):
+        train, val, test = load_and_split()
+        save_splits(train=train, val=val, test=test)
+    else:
+        log.info("Skipping data split and save.")
+    
+    if method == "impute":
+        log.info("Handling outliers and missing values in data.")
+        impute_missing_values()
